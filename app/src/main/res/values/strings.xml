@@ -118,6 +118,45 @@
     <string name="eq_preset_rock">Rock</string>
     <string name="eq_preset_vocal">Vocal Booster</string>
 
+    <string name="peq_enable">Parametric equalizer</string>
+    <string name="peq_bands">Parametric EQ bands</string>
+    <string name="title_activity_peq">Parametric equalizer</string>
+    <string name="peq_add_band">Add</string>
+    <string name="peq_import">Import</string>
+    <string name="peq_export">Export</string>
+    <string name="peq_edit_as_string">Edit as string</string>
+    <string name="peq_reset">Reset</string>
+    <string name="peq_reset_confirm_title">Are you sure?</string>
+    <string name="peq_reset_confirm">Do you want to reset your parametric EQ settings?</string>
+    <string name="peq_band_editor">Band editor</string>
+    <string name="peq_band_list">Band list</string>
+    <string name="peq_no_bands_defined">No bands defined</string>
+    <string name="peq_delete_band">Delete band</string>
+    <string name="peq_done_spaced">&#160;&#160;Done&#160;</string>
+    <string name="peq_done">Done</string>
+    <string name="peq_cancel_spaced">&#160;&#160;Discard&#160;</string>
+    <string name="peq_cancel">Discard</string>
+    <string name="peq_discard_changes_title">Discard changes and exit?</string>
+    <string name="peq_discard_changes">The values are not valid or empty. Your changes can\'t be saved.\nDo you want to discard your changes and exit?</string>
+    <string name="peq_frequency">Frequency</string>
+    <string name="peq_frequency_range">Value between 20Hz and 20000Hz</string>
+    <string name="peq_gain">Gain</string>
+    <string name="peq_gain_range">Value between -30dB and 30dB</string>
+    <string name="peq_q_factor">Q Factor</string>
+    <string name="peq_q_range">Value between 0.1 and 30.0</string>
+    <string name="peq_filter_type">Filter type</string>
+    <string name="peq_filter_type_peaking">Peaking</string>
+    <string name="peq_filter_type_low_shelf">Low shelf</string>
+    <string name="peq_filter_type_high_shelf">High shelf</string>
+    <string name="peq_preview">Preview</string>
+    <string name="peq_preview_collapsed">Preview (tap to expand)</string>
+    <string name="peq_import_success">Successfully imported %d bands</string>
+    <string name="peq_import_error">Failed to import file. Invalid EqualizerAPO format.</string>
+    <string name="peq_export_success">Exported successfully</string>
+    <string name="peq_edit_hint">EqualizerAPO format</string>
+    <string name="peq_preamp">Preamp</string>
+    <string name="peq_preamp_range">Value between -30dB and 0dB</string>
+
     <string name="geq_enable">Arbitrary response equalizer</string>
     <string name="geq_nodes">Magnitude response</string>
 

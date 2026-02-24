@@ -103,6 +103,10 @@
     <string name="key_geq_enable" translatable="false">geq_enable</string>
     <string name="key_geq_nodes" translatable="false">geq_nodes</string>
 
+    <string name="key_peq_enable" translatable="false">peq_enable</string>
+    <string name="key_peq_bands" translatable="false">peq_bands</string>
+    <string name="key_peq_preamp" translatable="false">peq_preamp</string>
+
     <string name="key_reverb_enable" translatable="false">reverb_enable</string>
     <string name="key_reverb_preset" translatable="false">reverb_preset</string>
 

@@ -15,6 +15,7 @@ object Constants {
     const val PREF_DDC = "dsp_ddc"
     const val PREF_EQ = "dsp_equalizer"
     const val PREF_GEQ = "dsp_graphiceq"
+    const val PREF_PEQ = "dsp_parametriceq"
     const val PREF_LIVEPROG = "dsp_liveprog"
     const val PREF_OUTPUT = "dsp_output_control"
     const val PREF_REVERB = "dsp_reverb"
@@ -25,6 +26,7 @@ object Constants {
     const val DEFAULT_CONVOLVER_ADVIMP = "-80;-100;0;0;0;0"
     const val DEFAULT_GEQ = "GraphicEQ: "
     const val DEFAULT_GEQ_INTERNAL = "GraphicEQ: 0.0 0.0;"
+    const val DEFAULT_PEQ = "PEQ: "
     const val DEFAULT_EQ = "25.0;40.0;63.0;100.0;160.0;250.0;400.0;630.0;1000.0;1600.0;2500.0;4000.0;6300.0;10000.0;16000.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0;0.0"
 
     // Intent actions
@@ -32,6 +34,7 @@ object Constants {
     const val ACTION_SAMPLE_RATE_UPDATED = BuildConfig.APPLICATION_ID + ".action.sample_rate.UPDATED"
     const val ACTION_PRESET_LOADED = BuildConfig.APPLICATION_ID + ".action.preset.LOADED"
     const val ACTION_GRAPHIC_EQ_CHANGED = BuildConfig.APPLICATION_ID + ".action.preferences.graphiceq.CHANGED"
+    const val ACTION_PARAMETRIC_EQ_CHANGED = BuildConfig.APPLICATION_ID + ".action.preferences.parametriceq.CHANGED"
     const val ACTION_SESSION_CHANGED = BuildConfig.APPLICATION_ID + ".action.session.CHANGED"
     const val ACTION_SERVICE_STARTED = BuildConfig.APPLICATION_ID + ".action.service.STARTED"
     const val ACTION_SERVICE_STOPPED = BuildConfig.APPLICATION_ID + ".action.service.STOPPED"

@@ -10,8 +10,10 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import me.timschneeberger.rootlessjamesdsp.R
 import me.timschneeberger.rootlessjamesdsp.interop.structure.EelVmVariable
+import me.timschneeberger.rootlessjamesdsp.model.ParametricEqBandList
 import me.timschneeberger.rootlessjamesdsp.model.ProcessorMessage
 import me.timschneeberger.rootlessjamesdsp.preference.FileLibraryPreference
+import me.timschneeberger.rootlessjamesdsp.utils.BiquadUtils
 import me.timschneeberger.rootlessjamesdsp.utils.Constants
 import me.timschneeberger.rootlessjamesdsp.utils.extensions.ContextExtensions.sendLocalBroadcast
 import timber.log.Timber
@@ -83,6 +85,11 @@ abstract class JamesDspBaseEngine(val context: Context, val callbacks: JamesDspW
             val geqEnabled = cache.get(R.string.key_geq_enable, false)
             val geqBands = cache.get(R.string.key_geq_nodes, Constants.DEFAULT_GEQ_INTERNAL)
 
+            cache.select(Constants.PREF_PEQ)
+            val peqEnabled = cache.get(R.string.key_peq_enable, false)
+            val peqBandsStr = cache.get(R.string.key_peq_bands, Constants.DEFAULT_PEQ)
+            val peqPreamp = cache.get(R.string.key_peq_preamp, 0f)
+
             cache.select(Constants.PREF_REVERB)
             val reverbEnabled = cache.get(R.string.key_reverb_enable, false)
             val reverbPreset = cache.get(R.string.key_reverb_preset, "0").toInt()
@@ -122,7 +129,8 @@ abstract class JamesDspBaseEngine(val context: Context, val callbacks: JamesDspW
                     Constants.PREF_COMPANDER -> setCompander(compEnabled, compTimeConst, compGranularity, compTfTransforms, compResponse)
                     Constants.PREF_BASS -> setBassBoost(bassEnabled, bassMaxGain)
                     Constants.PREF_EQ -> setMultiEqualizer(eqEnabled, eqFilterType, eqInterpolationMode, eqBands)
-                    Constants.PREF_GEQ -> setGraphicEq(geqEnabled, geqBands)
+                    Constants.PREF_GEQ -> setGraphicEqCombined(geqEnabled, geqBands, peqEnabled, peqBandsStr, peqPreamp)
+                    Constants.PREF_PEQ -> setGraphicEqCombined(geqEnabled, geqBands, peqEnabled, peqBandsStr, peqPreamp)
                     Constants.PREF_REVERB -> setReverb(reverbEnabled, reverbPreset)
                     Constants.PREF_STEREOWIDE -> setStereoEnhancement(swEnabled, swMode)
                     Constants.PREF_CROSSFEED -> setCrossfeed(crossfeedEnabled, crossfeedMode)
@@ -268,6 +276,92 @@ abstract class JamesDspBaseEngine(val context: Context, val callbacks: JamesDspW
         return setGraphicEqInternal(enable, bands)
     }
 
+    fun setGraphicEqCombined(
+        geqEnabled: Boolean, geqBands: String,
+        peqEnabled: Boolean, peqBandsStr: String,
+        peqPreamp: Float = 0f
+    ): Boolean {
+        // Parse PEQ bands and compute biquad magnitude response at 512 points
+        val peqBands = ParametricEqBandList()
+        peqBands.deserialize(peqBandsStr)
+        val hasPeqBands = peqEnabled && peqBands.isNotEmpty()
+        val peqResponse = if (hasPeqBands) {
+            BiquadUtils.computeCombinedResponse(peqBands, numPoints = 512)
+        } else null
+
+        val anyEnabled = geqEnabled || hasPeqBands
+        if (!anyEnabled) {
+            return setGraphicEqInternal(false, "")
+        }
+
+        // Apply preamp offset to PEQ response
+        val preampOffset = if (hasPeqBands) peqPreamp.toDouble() else 0.0
+
+        if (peqResponse != null && geqEnabled && geqBands.contains("GraphicEQ:", true)) {
+            // Both PEQ and GEQ enabled: merge magnitudes
+            val combined = mergeGeqWithPeq(geqBands, peqResponse, preampOffset)
+            return setGraphicEqInternal(true, combined)
+        } else if (peqResponse != null) {
+            // Only PEQ enabled
+            val peqString = BiquadUtils.toGraphicEqString(peqResponse, preampOffset)
+            return setGraphicEqInternal(true, peqString)
+        } else if (geqEnabled) {
+            // Only GEQ enabled
+            return setGraphicEq(geqEnabled, geqBands)
+        }
+
+        return setGraphicEqInternal(false, "")
+    }
+
+    private fun mergeGeqWithPeq(
+        geqBands: String,
+        peqResponse: List<Pair<Double, Double>>,
+        preampOffset: Double = 0.0
+    ): String {
+        // Parse GEQ nodes from "GraphicEQ: f1 g1; f2 g2; ..." string
+        val geqNodes = mutableListOf<Pair<Double, Double>>()
+        val content = geqBands.replace("GraphicEQ:", "").trim()
+        content.split(";").map { it.trim() }.filter { it.isNotBlank() }.forEach { s ->
+            val parts = s.split(" ").filter { it.isNotBlank() }
+            val freq = parts.getOrNull(0)?.toDoubleOrNull()
+            val gain = parts.getOrNull(1)?.toDoubleOrNull()
+            if (freq != null && gain != null) {
+                geqNodes.add(Pair(freq, gain))
+            }
+        }
+        geqNodes.sortBy { it.first }
+
+        // For each PEQ sample point, interpolate GEQ gain (log-linear) and sum
+        val sb = StringBuilder("GraphicEQ: ")
+        for ((peqFreq, peqGain) in peqResponse) {
+            val geqGain = interpolateGeq(geqNodes, peqFreq)
+            sb.append("${dfMergeFreq.format(peqFreq)} ${dfMergeGain.format(peqGain + geqGain + preampOffset)}; ")
+        }
+
+        return sb.toString()
+    }
+
+    private fun interpolateGeq(nodes: List<Pair<Double, Double>>, freq: Double): Double {
+        if (nodes.isEmpty()) return 0.0
+        if (freq <= nodes.first().first) return nodes.first().second
+        if (freq >= nodes.last().first) return nodes.last().second
+
+        // Find surrounding nodes and do log-linear interpolation
+        for (i in 0 until nodes.size - 1) {
+            val (f0, g0) = nodes[i]
+            val (f1, g1) = nodes[i + 1]
+            if (freq in f0..f1) {
+                if (f1 <= f0) return g0
+                val logF = kotlin.math.ln(freq)
+                val logF0 = kotlin.math.ln(f0)
+                val logF1 = kotlin.math.ln(f1)
+                val t = (logF - logF0) / (logF1 - logF0)
+                return g0 + t * (g1 - g0)
+            }
+        }
+        return 0.0
+    }
+
     fun setLiveprog(enable: Boolean, path: String): Boolean
     {
         val fullPath = FileLibraryPreference.createFullPathCompat(context, path)
@@ -324,5 +418,10 @@ abstract class JamesDspBaseEngine(val context: Context, val callbacks: JamesDspW
         override fun onLiveprogResult(resultCode: Int, id: String, errorMessage: String?) {}
         override fun onVdcParseError() {}
         override fun onConvolverParseError(errorCode: ProcessorMessage.ConvolverErrorCode) {}
+    }
+
+    companion object {
+        private val dfMergeFreq = java.text.DecimalFormat("0.00", java.text.DecimalFormatSymbols.getInstance(java.util.Locale.ENGLISH))
+        private val dfMergeGain = java.text.DecimalFormat("0.000000", java.text.DecimalFormatSymbols.getInstance(java.util.Locale.ENGLISH))
     }
 }
